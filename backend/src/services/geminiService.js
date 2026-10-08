@@ -1,6 +1,8 @@
 const { GoogleGenAI, Type } = require("@google/genai");
 const { z } = require("zod");
-
+module.export= { analyzeResume,
+  fixSelectedIssues
+}
 const env = require("../config/env");
 const ApiError = require("../utils/ApiError");
 
@@ -139,6 +141,30 @@ const responseSchema = {
     },
   },
 };
+
+async function fixSelectedIssues (resumeContent, selectedIssues) {
+  try{
+    const prompt= `You are ATS Resume Expert
+    
+    Resume ${resumeContent}
+    
+    Selected Ats Issues
+    ${
+      selectedIssues.join(",")
+    }
+
+    Fix the issues
+    `
+
+
+    const result = await model.generateContent(prompt);
+
+    return result.response.text();
+  } catch (error) {
+    console.log("Gemini Fix The Error", error);
+    throw error;
+  }
+}
 
 const analysisValidator = z.object({
   atsScore: z.number().min(0).max(100),

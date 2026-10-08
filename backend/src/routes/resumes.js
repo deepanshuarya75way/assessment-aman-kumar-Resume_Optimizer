@@ -1,6 +1,9 @@
 const express = require("express");
-const { z } = require("zod");
+const { z, success } = require("zod");
 const mongoose = require("mongoose");
+const Resume = require("../models/Resume");
+const ResumeVersion = require("../models/ResumeVersion");
+const ficDelectedIssues = require("../services/geminiService");
 
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/ApiError");
@@ -111,6 +114,50 @@ router.get(
 
     res.json({ resumes });
   })
+);
+
+router.post(
+  "/:id/fix-selected-issues",
+  auth,
+  async(req, res) => {
+    try {
+      const { selectedIssues } = req.body;
+      if (!selectedIssues || selectedIssues.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Please select at least one issue"
+        });
+      }
+      const resume = await Resume.findById(req.params.id);
+
+      if (!resume) {
+        return res.status(404).json({
+          sucess: false,
+          message: "Not found"
+        });
+      }
+
+      const updateResume = await fixSelectedIssues (
+        resume.content,
+        selectedIssues
+      );
+
+
+      const version = await ResumeVersion.create({
+        resumeId: resume._id,
+        content: updateResume,
+        fixedIssues: selectedIssues
+      });
+    } catch(error) {
+      console.log(error);
+
+
+      return res.status(500).json({
+        sucess: false,
+        message: error.message
+      });
+    }
+  }  
 );
 
 router.get(
